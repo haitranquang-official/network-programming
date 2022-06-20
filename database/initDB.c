@@ -38,6 +38,7 @@ int main() {
 
     mysql_query(connection,
     "CREATE TABLE resource(id INT PRIMARY KEY AUTO_INCREMENT,"
-    " user_id INT NOT NULL,"
+    " user_id INT NOT NULL, "
+    " path VARCHAR(255), "
     " FOREIGN KEY (user_id) REFERENCES user(id))");
 }
