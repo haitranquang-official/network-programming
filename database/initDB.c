@@ -18,6 +18,8 @@ int main() {
         exit(1);
     } 
 
+    mysql_query(connection, "DROP DATABASE IF EXISTS network_programming");
+
     mysql_query(connection, "CREATE DATABASE network_programming");
 
     mysql_query(connection, "USE network_programming");
@@ -28,7 +30,8 @@ int main() {
     mysql_query(connection, 
     "CREATE TABLE user(id INT PRIMARY KEY AUTO_INCREMENT,"
     " username VARCHAR(255) UNIQUE,"
-    " password VARCHAR(255))");
+    " password VARCHAR(255),"
+    " home_dir VARCHAR(500))");
 
     mysql_query(connection,
     "DROP TABLE IF EXISTS resource");
