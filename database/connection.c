@@ -7,7 +7,7 @@ MYSQL* connection = NULL;
 char* host = "localhost";
 char* username = "debian-sys-maint";
 char* password = "9sbcURb7H6tvLG16";
-char* database = "test";
+char* database = "network_programming";
 
 MYSQL* open_connection() {
 	// initialize connection
@@ -17,13 +17,13 @@ MYSQL* open_connection() {
 			printf("%s\n", mysql_error(connection));
 			exit(1);
     	}
+	
+		// try connecting to the database
+		if (mysql_real_connect(connection, host, username, password, database, 0, NULL, 0) == NULL) {
+			fprintf(stderr, "%s\n", mysql_error(connection));
+			exit(1);
+		}
 	}
-
-	// try connecting to the database
-	if (mysql_real_connect(connection, host, username, password, database, 0, NULL, 0) == NULL) {
-        printf("Invalid credentials");
-        exit(1);
-    }
 
 	return connection;
 }
