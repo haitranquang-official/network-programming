@@ -1,11 +1,9 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/socket.h>
 #include "file_transfer.h"
 #include "../database/connection.h"
-
-char DATA_START[128] = "150 Start transfering data on the data channel"; 
-
 
 void finish_with_error(MYSQL* connection) {
 	fprintf(stderr, "%s\n", mysql_error(connection)); 
@@ -58,8 +56,6 @@ int download(struct file_transfer_param param) {
 		}
 	}
 
-	printf("%s\n", abosulute_user_path);
-
 	mysql_free_result(result);
 
 	// find absolute path from database
@@ -77,6 +73,8 @@ int download(struct file_transfer_param param) {
 	row = mysql_fetch_row(result);
 
 	if(row != NULL) {
+		send(param.cfd, DATA_START, sizeof(DATA_START), 0);	
+
 		FILE* file = fopen(row[0], "rb");	
 
 		fseek(file, 0, SEEK_END);
@@ -85,17 +83,21 @@ int download(struct file_transfer_param param) {
 
 		char* data = (char *) calloc(size, sizeof(char));
 		fread(data, 1, size, file);
-		printf("%s\n", data);
+
+		// send this file to client
+		int sent = 0;
+		while(sent < size) {
+			sent += send(param.dfd, data + sent, size - sent, 0);
+		}
+		close(param.dfd);
 
 		free(data);
 		data = NULL;
 
 		fclose(file);
+
+		send(param.cfd, DATA_COMPLETED, sizeof(DATA_COMPLETED), 0);
 	}
 
 	mysql_free_result(result);
-
-	// create a file in local
-
-	// write file
 }

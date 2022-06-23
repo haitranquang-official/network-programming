@@ -1,3 +1,6 @@
+char DATA_START[128] = "150 Start transfering data on the data channel"; 
+char DATA_COMPLETED[128] = "226 Successfully sent/receive";
+
 struct file_transfer_param {
 	int cfd;
 	int dfd;
