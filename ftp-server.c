@@ -11,6 +11,9 @@
 #include <pthread.h>
 #include <dirent.h>
 
+pthread_t* tid = NULL;
+int count = 0;
+
 void append(char* data, char** presp)
 {
     int oldlen = (*presp == NULL ? 0 : strlen(*presp));
@@ -28,6 +31,9 @@ int checkDataBase(char* userName, char* password) {
 // Thread to handle with client
 void* thread_proc(void* arg) {
     int cfd = *((int*)arg);
+
+    close(cfd);
+	free(arg);
 }
 
 int main(int argc, char** argv) {
@@ -66,8 +72,11 @@ int main(int argc, char** argv) {
                     //Handle each client in a separated thread here
                     int* arg = (int*)calloc(1, sizeof(int));
                     *arg = tmp;
-                    pthread_t tid = 0;
-                    pthread_create(&tid, NULL, thread_proc, arg);
+
+                    tid = (pthread_t*) realloc(tid, (count + 1) * sizeof(pthread_t));
+
+                    pthread_create(&tid[count], NULL, thread_proc, arg);
+                    count++;
                 }
             } 
         }
