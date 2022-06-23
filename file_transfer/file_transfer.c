@@ -2,8 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include "file_transfer.h"
 #include "../database/connection.h"
+
+char DATA_START[128] = "150 Start transfering data on the data channel"; 
+char DATA_COMPLETED[128] = "226 Successfully sent/receive";
 
 void finish_with_error(MYSQL* connection) {
 	fprintf(stderr, "%s\n", mysql_error(connection)); 
@@ -11,7 +15,7 @@ void finish_with_error(MYSQL* connection) {
 }
 
 int upload(char* file_path) {
-
+	return 0;
 }
 
 int download(struct file_transfer_param param) {
@@ -100,4 +104,6 @@ int download(struct file_transfer_param param) {
 	}
 
 	mysql_free_result(result);
+
+	return 0;
 }
