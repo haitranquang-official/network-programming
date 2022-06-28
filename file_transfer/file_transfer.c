@@ -14,7 +14,104 @@ void finish_with_error(MYSQL* connection) {
 	close_connection();
 }
 
-int upload() {
+char* find_home_dir_by_user(int user_id) {
+	MYSQL* connection = open_connection();
+
+	char query[2048];
+	memset(query, 0, sizeof(query));
+
+	// concatenate file_path to user's home_dir
+	sprintf(query, "SELECT home_dir FROM user WHERE id = %d", user_id);
+
+	// if the query fails, then close the connection and return
+	if(mysql_query(connection, query)) {
+		finish_with_error(connection);
+		return NULL;
+	}
+
+	// if not fails, then return the home_dir 
+	MYSQL_RES* result = mysql_store_result(connection);
+	if(result == NULL) {
+		finish_with_error(connection);
+		return NULL;
+	}
+
+	int num_fields = mysql_num_fields(result);
+
+	MYSQL_ROW row;
+	row = mysql_fetch_row(result);
+
+	if(row == NULL) {
+		return NULL;
+	}
+
+	char res[1024];
+	strcpy(res, row[0]);
+
+	mysql_free_result(res);
+	
+	return res; 
+}
+
+void insert_new_resource(int user_id, char* dir_path, char* resource_name) {
+	MYSQL* connection = open_connection();
+
+	char query[2048];
+	memset(query, 0, sizeof(query));
+
+	sprintf(query, "INSERT INTO resource (user_id, path) values (%s, %s/%s)", user_id, dir_path, resource_name);
+
+	if(mysql_query(connection, query)) {
+		finish_with_error(connection);
+	}
+}
+
+int upload(int cfd, int dfd, int user_id, char* file_name, char* upload_path) {
+	// pre-process file_name
+	while(	file_name[strlen(file_name) - 1] == '\r' ||
+			file_name[strlen(file_name) - 1] == '\n') {
+		file_name[strlen(file_name) - 1] = 0;
+	}
+
+	// find home dir of user 
+	char* home_dir = find_home_dir_by_user(user_id);
+	if(home_dir == NULL) {
+		fprintf(stderr, "Something wrong with finding home_dir\n");
+	}
+
+	// create path to which the file is uploaded
+	char full_path[1024];
+	memset(full_path, 0, sizeof(full_path));
+	sprintf(full_path, "%s%s/%s", home_dir, upload_path, file_name);
+
+	// send notification to client
+	send(cfd, DATA_START, strlen(DATA_START), 0);
+
+	FILE* file = fopen(full_path, "wb");
+	char data[1024];
+	while(1) {
+		memset(data, 0, sizeof(data));
+
+		// Receive the file from client (receive at max rate).
+		int r = recv(dfd, data, sizeof(data), 0);
+		if(r > 0) {
+			fwrite(data, sizeof(char), r, file);	
+		}
+
+		// if this is the last chunk from the client, then break
+		if(r < sizeof(data)) {
+			break;
+		}	
+	}
+	fclose(file);
+
+	close(dfd);
+
+	// insert a new record to table `resource`
+	insert_new_resource(user_id, upload_path, file_name);
+
+	send(cfd, DATA_COMPLETED, strlen(DATA_COMPLETED), 0);
+
 	return 0;
 }
 
@@ -49,7 +146,7 @@ int download(int cfd, int dfd, int user_id, char* file_path) {
 	while((row = mysql_fetch_row(result))) {
 		for(int i = 0; i < num_fields; i++) {
 			if(row[i]) {
-				sprintf(abosulute_user_path, "%s/%s", row[i], file_path);			
+				sprintf(abosulute_user_path, "%s%s", row[i], file_path);			
 			}
 			else {
 				fprintf(stderr, "No home_dir found for user %d", user_id);
@@ -74,7 +171,7 @@ int download(int cfd, int dfd, int user_id, char* file_path) {
 	row = mysql_fetch_row(result);
 
 	if(row != NULL) {
-		send(cfd, DATA_START, sizeof(DATA_START), 0);	
+		send(cfd, DATA_START, strlen(DATA_START), 0);	
 
 		FILE* file = fopen(row[0], "rb");	
 
@@ -97,7 +194,7 @@ int download(int cfd, int dfd, int user_id, char* file_path) {
 
 		fclose(file);
 
-		send(cfd, DATA_COMPLETED, sizeof(DATA_COMPLETED), 0);
+		send(cfd, DATA_COMPLETED, strlen(DATA_COMPLETED), 0);
 	}
 
 	mysql_free_result(result);
