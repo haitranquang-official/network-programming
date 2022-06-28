@@ -14,14 +14,11 @@ void finish_with_error(MYSQL* connection) {
 	close_connection();
 }
 
-int upload(char* file_path) {
+int upload() {
 	return 0;
 }
 
-int download(struct file_transfer_param param) {
-	char* file_path = param.file_path;
-	int user_id = param.user_id;
-
+int download(int cfd, int dfd, int user_id, char* file_path) {
 	char abosulute_user_path[1024];
 	memset(abosulute_user_path, 0, sizeof(abosulute_user_path));
 
@@ -77,7 +74,7 @@ int download(struct file_transfer_param param) {
 	row = mysql_fetch_row(result);
 
 	if(row != NULL) {
-		send(param.cfd, DATA_START, sizeof(DATA_START), 0);	
+		send(cfd, DATA_START, sizeof(DATA_START), 0);	
 
 		FILE* file = fopen(row[0], "rb");	
 
@@ -91,16 +88,16 @@ int download(struct file_transfer_param param) {
 		// send this file to client
 		int sent = 0;
 		while(sent < size) {
-			sent += send(param.dfd, data + sent, size - sent, 0);
+			sent += send(dfd, data + sent, size - sent, 0);
 		}
-		close(param.dfd);
+		close(dfd);
 
 		free(data);
 		data = NULL;
 
 		fclose(file);
 
-		send(param.cfd, DATA_COMPLETED, sizeof(DATA_COMPLETED), 0);
+		send(cfd, DATA_COMPLETED, sizeof(DATA_COMPLETED), 0);
 	}
 
 	mysql_free_result(result);
