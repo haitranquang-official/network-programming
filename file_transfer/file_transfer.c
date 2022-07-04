@@ -36,8 +36,6 @@ char* find_home_dir_by_user(int user_id) {
 		return NULL;
 	}
 
-	int num_fields = mysql_num_fields(result);
-
 	MYSQL_ROW row;
 	row = mysql_fetch_row(result);
 
@@ -45,10 +43,10 @@ char* find_home_dir_by_user(int user_id) {
 		return NULL;
 	}
 
-	char res[1024];
+	char* res = (char*) malloc(1024 * sizeof(1024)); 
 	strcpy(res, row[0]);
 
-	mysql_free_result(res);
+	mysql_free_result(result);
 	
 	return res; 
 }
@@ -59,7 +57,7 @@ void insert_new_resource(int user_id, char* dir_path, char* resource_name) {
 	char query[2048];
 	memset(query, 0, sizeof(query));
 
-	sprintf(query, "INSERT INTO resource (user_id, path) values (%s, %s/%s)", user_id, dir_path, resource_name);
+	sprintf(query, "INSERT INTO resource (user_id, path) values (%d, %s/%s)", user_id, dir_path, resource_name);
 
 	if(mysql_query(connection, query)) {
 		finish_with_error(connection);
@@ -111,6 +109,8 @@ int upload(int cfd, int dfd, int user_id, char* file_name, char* upload_path) {
 	insert_new_resource(user_id, upload_path, file_name);
 
 	send(cfd, DATA_COMPLETED, strlen(DATA_COMPLETED), 0);
+
+	free(home_dir);
 
 	return 0;
 }
