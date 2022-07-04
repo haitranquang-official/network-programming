@@ -1,6 +1,7 @@
 #include <stdio.h>
-#include "login/login.h"
-#include "database/connection.h"
+#include <string.h>
+#include "login.h"
+#include "../database/connection.h"
 
 int login(char username[256], char password[256]) {
     // Write code to authentication user here
@@ -23,8 +24,6 @@ int login(char username[256], char password[256]) {
 		close_connection();
         return -1;
     }
-
-    int num_fields = mysql_num_fields(result);
 
     MYSQL_ROW row;
     row = mysql_fetch_row(result);

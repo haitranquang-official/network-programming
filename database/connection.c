@@ -5,8 +5,8 @@ MYSQL* connection = NULL;
 
 // database credentials
 char* host = "localhost";
-char* username = "BUDA";
-char* password = "BUDA";
+char* username = "debian-sys-maint";
+char* password = "9sbcURb7H6tvLG16";
 char* database = "network_programming";
 
 MYSQL* open_connection() {
