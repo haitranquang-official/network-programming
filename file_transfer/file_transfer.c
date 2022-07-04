@@ -121,23 +121,24 @@ int download(int cfd, int dfd, int user_id, char* file_path) {
 	mysql_free_result(result);
 
 	// find absolute path from database
-	char absolute_system_path[2048];
-	memset(absolute_system_path, 0, sizeof(absolute_system_path));
+	// char absolute_system_path[2048];
+	// memset(absolute_system_path, 0, sizeof(absolute_system_path));
 
 	// find the real file path in the system
-	sprintf(query, "select path from resource where path like \"%%%s\" and user_id = %d", abosulute_user_path, user_id);
-	if(mysql_query(connection, query)) {
-		finish_with_error(connection);
-		return 1;
-	}
+	// sprintf(query, "select path from resource where path like \"%%%s\" and user_id = %d", abosulute_user_path, user_id);
+	// if(mysql_query(connection, query)) {
+	// 	finish_with_error(connection);
+	// 	return 1;
+	// }
 
-	result = mysql_store_result(connection);
-	row = mysql_fetch_row(result);
+	// result = mysql_store_result(connection);
+	// row = mysql_fetch_row(result);
 
-	if(row != NULL) {
+	// if(row != NULL) {
 		send(cfd, DATA_START, strlen(DATA_START), 0);	
 
-		FILE* file = fopen(row[0], "rb");	
+		// FILE* file = fopen(row[0], "rb");
+		FILE* file = fopen(abosulute_user_path, "rb");	
 
 		fseek(file, 0, SEEK_END);
 		int size = ftell(file);
@@ -159,9 +160,9 @@ int download(int cfd, int dfd, int user_id, char* file_path) {
 		fclose(file);
 
 		send(cfd, DATA_COMPLETED, strlen(DATA_COMPLETED), 0);
-	}
+	// }
 
-	mysql_free_result(result);
+	// mysql_free_result(result);
 
 	return 0;
 }

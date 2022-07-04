@@ -14,6 +14,7 @@
 #include "./login/login.h"
 #include "./database/user.h"
 #include "./scan_dir/scan_dir.h"
+#include "./file_transfer/file_transfer.h"
 
 pthread_t *tid = NULL;
 int count = 0;
@@ -55,6 +56,7 @@ void *thread_proc(void *arg)
     int cfd = ((struct THREADPARAM*)arg)->cfd;
     int pasvport = ((struct THREADPARAM*)arg)->port;
     int dfd = -1;
+    int userId = -1;
 
     char buffer[1024];
     send(cfd, WELCOME, strlen(WELCOME), 0);
@@ -67,13 +69,13 @@ void *thread_proc(void *arg)
             char username[256], password[256];
             sscanf(buffer, "LOGIN %s %s", username, password);
 
-            int userId = login(username, password);
+            userId = login(username, password);
 
             if(userId < 0) {
                 send(cfd, LOGIN_FAILED, strlen(LOGIN_FAILED), 0);
             }
             else {
-                strcpy(path, find_home_dir_by_user(userId));
+                strcpy(path, "/");
                 send(cfd, LOGIN_OK, strlen(LOGIN_OK), 0);
             }
         }
@@ -104,7 +106,14 @@ void *thread_proc(void *arg)
         }
         else if (strncmp(buffer, "LS", 2) == 0) {    // list files in current directory
             char* resp = NULL;
-            scan(path, &resp);
+
+            char full_path[2048];
+            memset(full_path, 0, sizeof(full_path));
+
+            sprintf(full_path, "%s%s", find_home_dir_by_user(userId), path);
+
+            scan(full_path, &resp);
+
             send(cfd, DATA_START, strlen(DATA_START), 0);
             send(dfd, resp, strlen(resp), 0);
             close(dfd);
@@ -117,7 +126,7 @@ void *thread_proc(void *arg)
                     {
                         dir[strlen(dir) - 1] = 0;
                     }
-            sprintf(path + strlen(path), "/%s", dir);
+            sprintf(path + strlen(path), "%s/", dir);
             send(cfd, CWDOK, strlen(CWDOK), 0);
         }
         else if (strncmp(buffer, "CDUP", 4) == 0) {     // go to intermediate upper directory
@@ -135,7 +144,17 @@ void *thread_proc(void *arg)
             send(cfd, CDUPOK, strlen(CDUPOK), 0);        
         }
         else if (strncmp(buffer, "DOWNLOAD", 7) == 0) {     // Download a file to local machine
-           
+            char file_path[1024];
+            memset(file_path, 0, sizeof(file_path));
+            sscanf(buffer, "DOWNLOAD %s", file_path);
+
+            char full_path[2048];
+            memset(full_path, 0, sizeof(full_path));
+
+            strcpy(full_path, path);
+            strcpy(full_path + strlen(full_path), file_path);
+
+            download(cfd, dfd, userId, full_path);
         }
         else if (strncmp(buffer, "UPLOAD", 6) == 0) {       // Upload to server
             
