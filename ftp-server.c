@@ -106,7 +106,8 @@ void *thread_proc(void *arg)
             char* resp = NULL;
             scan(path, &resp);
             send(cfd, DATA_START, strlen(DATA_START), 0);
-            send(cfd, resp, strlen(resp), 0);
+            send(dfd, resp, strlen(resp), 0);
+            close(dfd);
             send(cfd, DATA_COMPLETED, strlen(DATA_COMPLETED), 0);
         }
         else if (strncmp(buffer, "CWD", 3) == 0) {    // change working directory
