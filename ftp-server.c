@@ -13,6 +13,7 @@
 #include "./database/connection.h"
 #include "./login/login.h"
 #include "./database/user.h"
+#include "./scan_dir/scan_dir.h"
 
 pthread_t *tid = NULL;
 int count = 0;
@@ -37,8 +38,7 @@ void *thread_proc(void *arg)
     char* CDUPOK = "250 CDUP Okay\n";
     char* CWDOK = "250 CWD Okay\n";
     char* WELCOME = "220 My FTP Server\n";
-    char* USEROK = "331 Please send your password\n";
-    char* PASSOK = "230 Password okay\n";
+    char* LOGIN_OK = "911 Login successfully\n";
     char* SYST = "215 UNIX FTP Server\n";
     char* FEAT = "211-Features:\r\n MDTM\r\n REST STREAM\r\n SIZE\r\n MLST type*;size*;modify*;perm*;\r\n MLSD\r\n AUTH SSL\r\n AUTH TLS\r\n PROT\r\n PBSZ\r\n UTF8\r\n TVFS\r\n EPSV\r\n EPRT\r\n MFMT\r\n211 End\n";
     char* OPTS = "202 UTF8 OKAY\n";
@@ -73,6 +73,7 @@ void *thread_proc(void *arg)
             }
             else {
                 strcpy(path, find_home_dir_by_user(userId));
+                send(cfd, LOGIN_OK, strlen(LOGIN_OK), 0);
             }
         }
         else if (strncmp(buffer, "PWD", 3) == 0) {     // print current directory
@@ -95,14 +96,14 @@ void *thread_proc(void *arg)
 
             char rsp[1024];
             memset(rsp, 0, sizeof(rsp));
-            sprintf(rsp, "227 Entering Passive Mode (172,29,202,83,%d,%d)\n", (pasvport & 0xFF00) >> 8, pasvport & 0x00FF);
+            sprintf(rsp, "227 Entering Passive Mode (127,0,0,1,%d,%d)\n", (pasvport & 0xFF00) >> 8, pasvport & 0x00FF);
             send(cfd, rsp, strlen(rsp), 0);
 
             dfd = accept(sfd, (struct sockaddr*)&caddr, &clen);
         }
         else if (strncmp(buffer, "LS", 2) == 0) {    // list files in current directory
             char* resp = NULL;
-            // scan(path, &resp);
+            scan(path, &resp);
             send(cfd, DATA_START, strlen(DATA_START), 0);
             send(dfd, resp, strlen(resp), 0);
             close(dfd);
@@ -148,6 +149,7 @@ void *thread_proc(void *arg)
 
 int main(int argc, char **argv)
 {
+    srand(time(NULL));
     signal(SIGINT, signal_handler);
 
     int sfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);

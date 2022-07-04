@@ -1,0 +1,1 @@
+void scan(char* path, char** presp);
