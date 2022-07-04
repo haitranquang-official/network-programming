@@ -28,7 +28,7 @@ void scan(char* path, char** presp)
             {
                 char fullpath[1024];
                 memset(fullpath, 0, sizeof(fullpath));
-                sprintf(fullpath, "%s%s", path, entries[i]->d_name);
+                sprintf(fullpath, "%s/%s", path, entries[i]->d_name);
                 FILE* f = fopen(fullpath, "rb");
                 if (f != NULL)
                 {

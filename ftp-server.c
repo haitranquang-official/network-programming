@@ -39,6 +39,7 @@ void *thread_proc(void *arg)
     char* CWDOK = "250 CWD Okay\n";
     char* WELCOME = "220 My FTP Server\n";
     char* LOGIN_OK = "911 Login successfully\n";
+    char* LOGIN_FAILED = "430 Invalid username or password\n";
     char* SYST = "215 UNIX FTP Server\n";
     char* FEAT = "211-Features:\r\n MDTM\r\n REST STREAM\r\n SIZE\r\n MLST type*;size*;modify*;perm*;\r\n MLSD\r\n AUTH SSL\r\n AUTH TLS\r\n PROT\r\n PBSZ\r\n UTF8\r\n TVFS\r\n EPSV\r\n EPRT\r\n MFMT\r\n211 End\n";
     char* OPTS = "202 UTF8 OKAY\n";
@@ -69,7 +70,7 @@ void *thread_proc(void *arg)
             int userId = login(username, password);
 
             if(userId < 0) {
-                printf("Invalid username/password\n");
+                send(cfd, LOGIN_FAILED, strlen(LOGIN_FAILED), 0);
             }
             else {
                 strcpy(path, find_home_dir_by_user(userId));
@@ -105,8 +106,7 @@ void *thread_proc(void *arg)
             char* resp = NULL;
             scan(path, &resp);
             send(cfd, DATA_START, strlen(DATA_START), 0);
-            send(dfd, resp, strlen(resp), 0);
-            close(dfd);
+            send(cfd, resp, strlen(resp), 0);
             send(cfd, DATA_COMPLETED, strlen(DATA_COMPLETED), 0);
         }
         else if (strncmp(buffer, "CWD", 3) == 0) {    // change working directory
@@ -116,7 +116,7 @@ void *thread_proc(void *arg)
                     {
                         dir[strlen(dir) - 1] = 0;
                     }
-            sprintf(path + strlen(path), "%s/", dir);
+            sprintf(path + strlen(path), "/%s", dir);
             send(cfd, CWDOK, strlen(CWDOK), 0);
         }
         else if (strncmp(buffer, "CDUP", 4) == 0) {     // go to intermediate upper directory
@@ -125,6 +125,9 @@ void *thread_proc(void *arg)
                 path[strlen(path) - 1] = 0;
                 while (path[strlen(path) - 1] != '/')
                 {
+                    path[strlen(path) - 1] = 0;
+                }
+                if(strlen(path) > 1 && path[strlen(path) - 1] == '/') {
                     path[strlen(path) - 1] = 0;
                 }
             }
