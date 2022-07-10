@@ -147,6 +147,12 @@ int download(int cfd, int dfd, int user_id, char* file_path) {
 		char* data = (char *) calloc(size, sizeof(char));
 		fread(data, 1, size, file);
 
+		char content_size[256];
+		memset(content_size, 0, sizeof(content_size));
+		sprintf(content_size, "%s%d\n", "Content Length: ", size);
+
+		send(dfd, content_size, strlen(content_size), 0);
+
 		// send this file to client
 		int sent = 0;
 		while(sent < size) {

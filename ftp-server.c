@@ -143,7 +143,7 @@ void *thread_proc(void *arg)
             }
             send(cfd, CDUPOK, strlen(CDUPOK), 0);        
         }
-        else if (strncmp(buffer, "DOWNLOAD", 7) == 0) {     // Download a file to local machine
+        else if (strncmp(buffer, "DOWNLOAD", 8) == 0) {     // Download a file to local machine
             char file_path[1024];
             memset(file_path, 0, sizeof(file_path));
             sscanf(buffer, "DOWNLOAD %s", file_path);
