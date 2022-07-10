@@ -124,7 +124,7 @@ void init_data_connection() {
 }
 
 void respond_to_server(int fd) {
-    char* ok = "OK\n";
+    char* ok = "OK";
     send(fd, ok, strlen(ok), 0);
 }
 
@@ -137,6 +137,11 @@ void process() {
 
     while(1) {
         fgets(request, sizeof(request), stdin);
+
+        while(	request[strlen(request) - 1] == '\r' ||
+                request[strlen(request) - 1] == '\n') {
+            request[strlen(request) - 1] = 0;
+        }
 
         if(strlen(request) == 0) {
             continue;
@@ -240,6 +245,39 @@ void process() {
 
             close(dfd);
 
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+            printf("%s", response);
+        }
+        else if (strncmp(request, "LS", 2) == 0) {    // list files in current directory
+            init_data_connection();
+
+            send(sfd, request, strlen(request), 0);
+
+            // Nhận thông báo DATA_START
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+            printf("%s", response);
+
+            respond_to_server(sfd);
+
+            // Trước khi nhận dữ liệu, thì nhận content length
+            memset(response, 0, sizeof(response));
+            recv(dfd, response, sizeof(response), 0);
+
+            int size;
+            sscanf(response, "Content Length: %d", &size);
+            respond_to_server(dfd);
+
+            // Khởi tạo response với độ dài vừa được nhận.
+            // Nhận dữ liệu qua data port
+            char* resp = (char *) calloc(size, 1);
+            recv(dfd, resp, size, 0);
+            printf("%s", resp);
+
+            close(dfd);
+
+            // Nhận thông báo DATA_COMPLETED
             memset(response, 0, sizeof(response));
             recv(sfd, response, sizeof(response), 0);
             printf("%s", response);
