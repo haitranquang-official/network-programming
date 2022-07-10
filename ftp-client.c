@@ -244,6 +244,30 @@ void process() {
             recv(sfd, response, sizeof(response), 0);
             printf("%s", response);
         }
+        else if (strncmp(request, "PWD", 3) == 0) {     // print current directory
+            send(sfd, request, strlen(request), 0);
+
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+
+            printf("%s", response);
+        }
+        else if (strncmp(request, "CWD", 3) == 0) {    // change working directory
+            send(sfd, request, strlen(request), 0);
+
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+
+            printf("%s", response);
+        }
+        else if (strncmp(request, "CDUP", 4) == 0) {     // go to intermediate upper directory
+            send(sfd, request, strlen(request), 0);
+
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+
+            printf("%s", response);   
+        }
         else if(strncmp(request, "QUIT", 4) == 0) {
             break;
         }
