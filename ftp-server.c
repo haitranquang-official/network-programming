@@ -157,7 +157,16 @@ void *thread_proc(void *arg)
             download(cfd, dfd, userId, full_path);
         }
         else if (strncmp(buffer, "UPLOAD", 6) == 0) {       // Upload to server
-            
+            char filename[256];
+            memset(filename, 0, sizeof(filename));
+            sscanf(buffer, "UPLOAD %s", filename);
+
+            char full_path[2048];
+            memset(full_path, 0, sizeof(full_path));
+
+            strcpy(full_path, path);
+
+            upload(cfd, dfd, userId, filename, full_path);
         }
         else {
             send(cfd, NOCOMMAND, strlen(NOCOMMAND), 0);    

@@ -14,6 +14,25 @@
 int sfd = -1;
 int dfd = -1;
 
+char *strrev(char *str)
+{
+    if (!str || ! *str)
+        return str;
+
+    int i = strlen(str) - 1, j = 0;
+
+    char ch;
+    while (i > j)
+    {
+        ch = str[i];
+        str[i] = str[j];
+        str[j] = ch;
+        i--;
+        j++;
+    }
+    return str;
+}
+
 void append(char* data, char** presp)
 {
     int oldlen = (*presp == NULL ? 0 : strlen(*presp));
@@ -168,12 +187,62 @@ void process() {
             fwrite(data, sizeof(char), received, file);
             fclose(file);
 
+            free(data);
+
             close(dfd);
 
             memset(response, 0, sizeof(response));
             recv(sfd, response, sizeof(response), 0);
             printf("%s", response);
             respond_to_server(sfd);
+        }
+        else if(strncmp(request, "UPLOAD", 6) == 0) {
+            char response[1024];
+            
+            init_data_connection();
+
+            char filepath[512];
+            memset(filepath, 0, sizeof(filepath));
+            sscanf(request, "UPLOAD %s", filepath);
+
+            char filename[512];
+            memset(filename, 0, sizeof(filename));
+            for(int i = strlen(filepath) - 1; i > 0 && filepath[i] != '/'; i--) {
+                sprintf(filename + strlen(filename), "%c", filepath[i]);
+            }
+
+            char real_request[1024];
+            sprintf(real_request, "%s%s", "UPLOAD ", strrev(filename));
+
+            send(sfd, real_request, strlen(real_request), 0);
+
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+            printf("%s", response);
+            respond_to_server(sfd);
+
+            FILE* file = fopen(filepath, "rb");
+                
+            fseek(file, 0, SEEK_END);
+            int size =  ftell(file);
+            fseek(file, 0, SEEK_SET);
+
+            char* data = (char*) calloc(size, 1);
+            fread(data, 1, size, file);
+
+            int sent = 0;
+            while (sent < size) {
+                sent += send(dfd, data + sent, size - sent, 0);
+            }
+
+            free(data);
+            fclose(file);
+
+            close(dfd);
+
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+            printf("%s", response);
         }
         else if(strncmp(request, "QUIT", 4) == 0) {
             break;
