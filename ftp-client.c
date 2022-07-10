@@ -158,7 +158,7 @@ void process() {
             // gửi command tới server
             send(sfd, request, strlen(request), 0);
 
-            // nhận response ở command port
+            // nhận thông báo DATA_START
             memset(response, 0, sizeof(response));
             recv(sfd, response, sizeof(response), 0);
 
@@ -186,8 +186,10 @@ void process() {
             char path[512];
             memset(path, 0, sizeof(path));
 
+            // Tạo một file mặc định ở đường dẫn này
             sprintf(path, "/home/hieutran29/Desktop/%s", filename);
             
+            // Viết dữ liệu được nhận vào file
             FILE* file = fopen(path, "wb");
             fwrite(data, sizeof(char), received, file);
             fclose(file);
@@ -196,10 +198,10 @@ void process() {
 
             close(dfd);
 
+            // Nhận thông báo DATA_COMPLETED
             memset(response, 0, sizeof(response));
             recv(sfd, response, sizeof(response), 0);
             printf("%s", response);
-            respond_to_server(sfd);
         }
         else if(strncmp(request, "UPLOAD", 6) == 0) {
             char response[1024];
