@@ -7,8 +7,8 @@
 #include "../database/connection.h"
 #include "../database/user.h"
 
-char DATA_START[128] = "150 Start transfering data on the data channel"; 
-char DATA_COMPLETED[128] = "226 Successfully sent/receive";
+char DATA_START[128] = "150 Start transfering data on the data channel\n"; 
+char DATA_COMPLETED[128] = "226 Successfully sent/receive\n";
 
 void finish_with_error(MYSQL* connection) {
 	fprintf(stderr, "%s\n", mysql_error(connection)); 
