@@ -114,10 +114,27 @@ void *thread_proc(void *arg)
 
             scan(full_path, &resp);
 
+            char ok_from_client[1024];
+
             send(cfd, DATA_START, strlen(DATA_START), 0);
+            memset(ok_from_client, 0, sizeof(ok_from_client));
+            recv(cfd, ok_from_client, sizeof(ok_from_client), 0);
+
+            char content_length[128];
+            memset(content_length, 0, sizeof(content_length));
+            sprintf(content_length, "%s%ld", "Content Length: ", strlen(resp));
+
+            send(dfd, content_length, strlen(content_length), 0);
+            memset(ok_from_client, 0, sizeof(ok_from_client));
+            recv(dfd, ok_from_client, sizeof(ok_from_client), 0);
+            
             send(dfd, resp, strlen(resp), 0);
+            memset(ok_from_client, 0, sizeof(ok_from_client));
+
             close(dfd);
+
             send(cfd, DATA_COMPLETED, strlen(DATA_COMPLETED), 0);
+            memset(ok_from_client, 0, sizeof(ok_from_client));
         }
         else if (strncmp(buffer, "CWD", 3) == 0) {    // change working directory
             char* dir = buffer + 4; //CWD <FOLDER>
@@ -157,9 +174,19 @@ void *thread_proc(void *arg)
             download(cfd, dfd, userId, full_path);
         }
         else if (strncmp(buffer, "UPLOAD", 6) == 0) {       // Upload to server
-            
+            char filename[256];
+            memset(filename, 0, sizeof(filename));
+            sscanf(buffer, "UPLOAD %s", filename);
+
+            char full_path[2048];
+            memset(full_path, 0, sizeof(full_path));
+
+            strcpy(full_path, path);
+
+            upload(cfd, dfd, userId, filename, full_path);
         }
         else {
+            printf("%s", buffer);
             send(cfd, NOCOMMAND, strlen(NOCOMMAND), 0);    
         }
     }

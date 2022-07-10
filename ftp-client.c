@@ -14,6 +14,25 @@
 int sfd = -1;
 int dfd = -1;
 
+char *strrev(char *str)
+{
+    if (!str || ! *str)
+        return str;
+
+    int i = strlen(str) - 1, j = 0;
+
+    char ch;
+    while (i > j)
+    {
+        ch = str[i];
+        str[i] = str[j];
+        str[j] = ch;
+        i--;
+        j++;
+    }
+    return str;
+}
+
 void append(char* data, char** presp)
 {
     int oldlen = (*presp == NULL ? 0 : strlen(*presp));
@@ -105,7 +124,7 @@ void init_data_connection() {
 }
 
 void respond_to_server(int fd) {
-    char* ok = "OK\n";
+    char* ok = "OK";
     send(fd, ok, strlen(ok), 0);
 }
 
@@ -118,6 +137,11 @@ void process() {
 
     while(1) {
         fgets(request, sizeof(request), stdin);
+
+        while(	request[strlen(request) - 1] == '\r' ||
+                request[strlen(request) - 1] == '\n') {
+            request[strlen(request) - 1] = 0;
+        }
 
         if(strlen(request) == 0) {
             continue;
@@ -134,7 +158,7 @@ void process() {
             // gửi command tới server
             send(sfd, request, strlen(request), 0);
 
-            // nhận response ở command port
+            // nhận thông báo DATA_START
             memset(response, 0, sizeof(response));
             recv(sfd, response, sizeof(response), 0);
 
@@ -162,10 +186,63 @@ void process() {
             char path[512];
             memset(path, 0, sizeof(path));
 
+            // Tạo một file mặc định ở đường dẫn này
             sprintf(path, "/home/hieutran29/Desktop/%s", filename);
             
+            // Viết dữ liệu được nhận vào file
             FILE* file = fopen(path, "wb");
             fwrite(data, sizeof(char), received, file);
+            fclose(file);
+
+            free(data);
+
+            close(dfd);
+
+            // Nhận thông báo DATA_COMPLETED
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+            printf("%s", response);
+        }
+        else if(strncmp(request, "UPLOAD", 6) == 0) {
+            char response[1024];
+            
+            init_data_connection();
+
+            char filepath[512];
+            memset(filepath, 0, sizeof(filepath));
+            sscanf(request, "UPLOAD %s", filepath);
+
+            char filename[512];
+            memset(filename, 0, sizeof(filename));
+            for(int i = strlen(filepath) - 1; i > 0 && filepath[i] != '/'; i--) {
+                sprintf(filename + strlen(filename), "%c", filepath[i]);
+            }
+
+            char real_request[1024];
+            sprintf(real_request, "%s%s", "UPLOAD ", strrev(filename));
+
+            send(sfd, real_request, strlen(real_request), 0);
+
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+            printf("%s", response);
+            respond_to_server(sfd);
+
+            FILE* file = fopen(filepath, "rb");
+                
+            fseek(file, 0, SEEK_END);
+            int size =  ftell(file);
+            fseek(file, 0, SEEK_SET);
+
+            char* data = (char*) calloc(size, 1);
+            fread(data, 1, size, file);
+
+            int sent = 0;
+            while (sent < size) {
+                sent += send(dfd, data + sent, size - sent, 0);
+            }
+
+            free(data);
             fclose(file);
 
             close(dfd);
@@ -173,7 +250,63 @@ void process() {
             memset(response, 0, sizeof(response));
             recv(sfd, response, sizeof(response), 0);
             printf("%s", response);
+        }
+        else if (strncmp(request, "LS", 2) == 0) {    // list files in current directory
+            init_data_connection();
+
+            send(sfd, request, strlen(request), 0);
+
+            // Nhận thông báo DATA_START
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+            printf("%s", response);
+
             respond_to_server(sfd);
+
+            // Trước khi nhận dữ liệu, thì nhận content length
+            memset(response, 0, sizeof(response));
+            recv(dfd, response, sizeof(response), 0);
+
+            int size;
+            sscanf(response, "Content Length: %d", &size);
+            respond_to_server(dfd);
+
+            // Khởi tạo response với độ dài vừa được nhận.
+            // Nhận dữ liệu qua data port
+            char* resp = (char *) calloc(size, 1);
+            recv(dfd, resp, size, 0);
+            printf("%s", resp);
+
+            close(dfd);
+
+            // Nhận thông báo DATA_COMPLETED
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+            printf("%s", response);
+        }
+        else if (strncmp(request, "PWD", 3) == 0) {     // print current directory
+            send(sfd, request, strlen(request), 0);
+
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+
+            printf("%s", response);
+        }
+        else if (strncmp(request, "CWD", 3) == 0) {    // change working directory
+            send(sfd, request, strlen(request), 0);
+
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+
+            printf("%s", response);
+        }
+        else if (strncmp(request, "CDUP", 4) == 0) {     // go to intermediate upper directory
+            send(sfd, request, strlen(request), 0);
+
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+
+            printf("%s", response);   
         }
         else if(strncmp(request, "QUIT", 4) == 0) {
             break;

@@ -55,6 +55,8 @@ int upload(int cfd, int dfd, int user_id, char* file_name, char* upload_path) {
 	// send notification to client
 	send(cfd, DATA_START, strlen(DATA_START), 0);
 
+	wait_client_response(cfd);
+
 	FILE* file = fopen(full_path, "wb");
 	char data[1024];
 	while(1) {
@@ -76,7 +78,7 @@ int upload(int cfd, int dfd, int user_id, char* file_name, char* upload_path) {
 	close(dfd);
 
 	// insert a new record to table `resource`
-	insert_new_resource(user_id, upload_path, file_name);
+	// insert_new_resource(user_id, upload_path, file_name);
 
 	send(cfd, DATA_COMPLETED, strlen(DATA_COMPLETED), 0);
 
