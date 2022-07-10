@@ -68,31 +68,109 @@ void connect_to_server() {
             memset(buffer, 0, sizeof(buffer));
             recv(sfd, buffer, sizeof(buffer), 0);
             printf("%s", buffer);
+        }
+    }
+}
 
-            // gọi lệnh PASV để thiết lập data port theo kiểu passive
+void init_data_connection() {
+    char* request = "PASV";
+
+    // gọi lệnh PASV để lấy data connection port
+    send(sfd, request, strlen(request), 0);
+
+    char response[1024];
+
+    recv(sfd, response, sizeof(response), 0);
+
+    printf("%s", response);
+
+    int pre, post;
+    sscanf(response, "227 Entering Passive Mode (127,0,0,1,%d,%d)", &pre, &post);
+
+    int port = pre * 256 + post;
+
+    dfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (dfd >= 0) {
+        struct sockaddr_in saddr;
+        saddr.sin_family = AF_INET;
+        saddr.sin_port = htons(port);
+        saddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+        int result = connect(dfd, (struct sockaddr*)&saddr, sizeof(saddr));
+
+        if(result == -1) {
+            dfd = -1;
+        }
+    }
+}
+
+void process() {
+    char request[1024];
+    char response[1024];
+
+    memset(request, 0, sizeof(request));
+    memset(response, 0, sizeof(response));
+
+    while(1) {
+        fgets(request, sizeof(request), stdin);
+
+        if(strncmp(request, "DOWNLOAD", 8) == 0) {
+            char filename[256];
+            memset(filename, 0, sizeof(filename));
+
+            sscanf(request, "DOWNLOAD %s", filename);
+
+            init_data_connection();
+
+            // gửi command tới server
+            send(sfd, request, strlen(request), 0);
+
+            // nhận response ở command port
+            memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
+            printf("%s", response);
+
+            // nhận về size của file
+            memset(response, 0, sizeof(response));
+            recv(dfd, response, sizeof(response), 0);
+            
+            int size;
+            sscanf(response, "Content Length: %d", &size);
+
+
+            char* data = (char*) calloc(size, 1);
+
+            int received = 0;
+            // nhận response ở data port
+            while(received < size) {
+                received += recv(dfd, data + received, size - received, 0);
+            }
+
+            char path[512];
+            memset(path, 0, sizeof(path));
+
+            sprintf(path, "~/Desktop/%s", filename);
+            
+            FILE* file = fopen(path, "wb");
+            fwrite(data, sizeof(char), received, file);
+            fclose(file);
+
+            close(dfd);
+
+            memset(response, 0, sizeof(response));
+            printf("%s", response);
         }
     }
 }
 
 int main(int argc, char** argv)
 {
+    signal(SIGINT, signal_handler);
 
+    // initialize command connection
     connect_to_server();
 
-    // char buffer[1024];
-    // memset(buffer, 0, sizeof(buffer));
-
-    // while(1) {
-    //     send(sfd, buffer, strlen(buffer), 0);
-
-    //     char reply[1024*20];
-    //     memset(reply, 0, sizeof(reply));            
-
-    //     int result = recv(sfd, reply, sizeof(reply), 0);
-    //     if(result < 0) {
-    //         break;
-    //     }
-    // }
+    process();
 
     close(sfd);
 
