@@ -15,6 +15,12 @@ void finish_with_error(MYSQL* connection) {
 	close_connection();
 }
 
+void wait_client_response(int fd) {
+	char ok_from_client[128];
+	memset(ok_from_client, 0, sizeof(ok_from_client));
+	recv(fd, ok_from_client, sizeof(ok_from_client), 0);
+}
+
 void insert_new_resource(int user_id, char* dir_path, char* resource_name) {
 	MYSQL* connection = open_connection();
 
@@ -135,7 +141,8 @@ int download(int cfd, int dfd, int user_id, char* file_path) {
 	// row = mysql_fetch_row(result);
 
 	// if(row != NULL) {
-		send(cfd, DATA_START, strlen(DATA_START), 0);	
+		send(cfd, DATA_START, strlen(DATA_START), 0);
+		wait_client_response(cfd);
 
 		// FILE* file = fopen(row[0], "rb");
 		FILE* file = fopen(abosulute_user_path, "rb");	
@@ -152,6 +159,7 @@ int download(int cfd, int dfd, int user_id, char* file_path) {
 		sprintf(content_size, "%s%d\n", "Content Length: ", size);
 
 		send(dfd, content_size, strlen(content_size), 0);
+		wait_client_response(dfd);
 
 		// send this file to client
 		int sent = 0;
@@ -159,6 +167,8 @@ int download(int cfd, int dfd, int user_id, char* file_path) {
 			sent += send(dfd, data + sent, size - sent, 0);
 		}
 		close(dfd);
+
+		wait_client_response(dfd);
 
 		free(data);
 		data = NULL;

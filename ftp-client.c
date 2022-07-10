@@ -104,8 +104,13 @@ void init_data_connection() {
     }
 }
 
+void respond_to_server(int fd) {
+    char* ok = "OK\n";
+    send(fd, ok, strlen(ok), 0);
+}
+
 void process() {
-    char request[1024];
+    char request[256];
     char response[1024];
 
     memset(request, 0, sizeof(request));
@@ -113,6 +118,10 @@ void process() {
 
     while(1) {
         fgets(request, sizeof(request), stdin);
+
+        if(strlen(request) == 0) {
+            continue;
+        }
 
         if(strncmp(request, "DOWNLOAD", 8) == 0) {
             char filename[256];
@@ -128,15 +137,17 @@ void process() {
             // nhận response ở command port
             memset(response, 0, sizeof(response));
             recv(sfd, response, sizeof(response), 0);
+
             printf("%s", response);
+            respond_to_server(sfd);
 
             // nhận về size của file
             memset(response, 0, sizeof(response));
             recv(dfd, response, sizeof(response), 0);
+            respond_to_server(dfd);
             
             int size;
             sscanf(response, "Content Length: %d", &size);
-
 
             char* data = (char*) calloc(size, 1);
 
@@ -146,10 +157,12 @@ void process() {
                 received += recv(dfd, data + received, size - received, 0);
             }
 
+            respond_to_server(dfd);
+
             char path[512];
             memset(path, 0, sizeof(path));
 
-            sprintf(path, "~/Desktop/%s", filename);
+            sprintf(path, "/home/hieutran29/Desktop/%s", filename);
             
             FILE* file = fopen(path, "wb");
             fwrite(data, sizeof(char), received, file);
@@ -158,7 +171,12 @@ void process() {
             close(dfd);
 
             memset(response, 0, sizeof(response));
+            recv(sfd, response, sizeof(response), 0);
             printf("%s", response);
+            respond_to_server(sfd);
+        }
+        else if(strncmp(request, "QUIT", 4) == 0) {
+            break;
         }
     }
 }
